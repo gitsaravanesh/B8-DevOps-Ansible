@@ -1,0 +1,50 @@
+---
+- name: Deploy Flask app and update Flask
+  hosts: ec2
+  become: true
+
+  vars:
+    app_name: myapp
+    app_repo_url: https://github.com/myuser/myapp.git
+    app_repo_version: main
+
+  tasks:
+    # Clone the application repository
+    - name: Clone app repository
+      git:
+        repo: "{{ app_repo_url }}"
+        dest: "/opt/{{ app_name }}"
+        version: "{{ app_repo_version }}"
+
+    # Install Flask and other dependencies
+    - name: Install dependencies
+      apt:
+        name: [python3-pip, python3-dev, build-essential]
+        state: present
+
+    - name: Install Flask
+      pip:
+        name: flask
+        state: latest
+
+    # Copy application files to the instances
+    - name: Copy application files
+      copy:
+        src: "/opt/{{ app_name }}/"
+        dest: "/var/www/{{ app_name }}"
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+    # Start the Flask application as a service
+    - name: Start Flask service
+      systemd:
+        name: "{{ app_name }}.service"
+        state: started
+        enabled: yes
+
+    # Update Flask to the latest version
+    - name: Update Flask
+      pip:
+        name: flask
+        state: latest
