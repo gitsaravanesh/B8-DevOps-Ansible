@@ -1,0 +1,3 @@
+[ec2]
+ec2-54-123-456-789.compute-1.amazonaws.com ansible_user=ubuntu
+ec2-54-987-654-321.compute-1.amazonaws.com ansible_user=ubuntu
