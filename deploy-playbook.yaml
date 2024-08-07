@@ -1,37 +1,50 @@
----
-- name: Deploy myapp with Ansible
-  hosts: my_ec2_group
-  become: true
+- hosts: all
+  become: yes
 
   tasks:
-  - name: Install Git
-    apt:
-      name: git
-      state: latest
+    - name: Update and install dependencies
+      yum:
+        name: ['git', 'python3', 'python3-pip']
+        state: present
+        update_cache: yes
 
-  - name: Clone myapp repository
-    git:
-      repo: https://github.com/cloudtechtrainer/8-DevOps-Ansible.git
-      dest: /opt/myapp
-      version: main
-      clone: yes
+    - name: Install virtualenv
+      pip:
+        name: virtualenv
+        executable: /usr/bin/pip3
 
-  - name: Install Python dependencies
-    pip:
-      requirements: /opt/myapp/requirements.txt
+    - name: Create virtual environment
+      command: /usr/bin/python3 -m venv /home/ec2-user/flaskapp/venv
 
-  - name: Start myapp
-    command: python /opt/myapp/myapp.py
-    async: 10
-    poll: 0
-    register: myapp_pid
+    - name: Install Flask in virtual environment
+      pip:
+        name: flask
+        executable: /home/ec2-user/flaskapp/venv/bin/pip
 
-  - name: Wait for myapp to start
-    async_status:
-      jid: "{{ myapp_pid.ansible_job_id }}"
-    register: myapp_result
-    until: myapp_result.finished
+    - name: Clone Flask app repository
+      git:
+        repo: 'https://github.com/yourusername/yourflaskrepo.git'
+        dest: /home/ec2-user/flaskapp
 
-  - name: Show myapp output
-    debug:
-      var: myapp_result.stdout_lines
+    - name: Create systemd service file for Flask app
+      copy:
+        dest: /etc/systemd/system/flaskapp.service
+        content: |
+          [Unit]
+          Description=Flask App
+          After=network.target
+
+          [Service]
+          User=ec2-user
+          WorkingDirectory=/home/ec2-user/flaskapp
+          ExecStart=/home/ec2-user/flaskapp/venv/bin/python /home/ec2-user/flaskapp/app.py
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Start and enable Flask app service
+      systemd:
+        name: flaskapp
+        enabled: yes
+        state: started
