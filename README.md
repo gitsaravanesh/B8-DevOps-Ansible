@@ -10,13 +10,6 @@ This repository contains the necessary configuration to deploy a Flask applicati
 - AWS EC2 instances running Amazon Linux 2.
 - SCP to move the SSH Key pair into EC2 instance.
 
-## Repository Structure
-
-├── ansible.cfg
-├── inventory
-├── setup.yml
-└── README.md
-
 ## Setup Instructions
 
 ### Step 1: Configure Inventory
@@ -39,12 +32,11 @@ private_key_file = /path/to/your/private-key.pem
 remote_user = ec2-user
 host_key_checking = False
 
-
 Step 3: Write Your Ansible Playbook
 The setup.yml playbook installs necessary packages, clones the Flask application from a Git repository, and sets up a systemd service to run the Flask app.
 
 Step 4: Run the Ansible Playbook
-ansible-playbook -i inventory setup.yml
+ansible-playbook -i inventory setup.yml --private-key=/home/ec2-user/key/ansible-key.pem
 
 Step 5: Verify the Deployment by checking the public IP in the browser
 
