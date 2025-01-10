@@ -2,29 +2,49 @@
   become: yes
 
   tasks:
-    - name: Update and install dependencies
+    - name: Update system and install dependencies
       yum:
-        name: ['git', 'python3', 'python3-pip']
+        name:
+          - git
+          - python3
+          - python3-pip
         state: present
         update_cache: yes
-
-    - name: Install virtualenv
-      pip:
-        name: virtualenv
-        executable: /usr/bin/pip3
-
-    - name: Create virtual environment
-      command: /usr/bin/python3 -m venv /home/ec2-user/flaskapp/venv
-
-    - name: Install Flask in virtual environment
-      pip:
-        name: flask
-        executable: /home/ec2-user/flaskapp/venv/bin/pip
 
     - name: Clone Flask app repository
       git:
         repo: 'https://github.com/cloudtechtrainer/B8-DevOps-Ansible.git'
         dest: /home/ec2-user/myflaskapp
+        force: yes
+
+    - name: Ensure the application directory for virtual environment exists
+      file:
+        path: /home/ec2-user/flaskapp
+        state: directory
+        owner: ec2-user
+        group: ec2-user
+        mode: '0755'
+
+    - name: Install virtualenv using pip3
+      pip:
+        name: virtualenv
+        executable: /usr/bin/pip3
+
+    - name: Create virtual environment for the Flask app
+      command: /usr/bin/python3 -m venv /home/ec2-user/flaskapp/venv
+      args:
+        creates: /home/ec2-user/flaskapp/venv
+
+    - name: Install Flask in the virtual environment
+      command: /home/ec2-user/flaskapp/venv/bin/pip install flask
+
+    - name: Set correct permissions for the Flask app directory
+      file:
+        path: /home/ec2-user/myflaskapp
+        state: directory
+        owner: ec2-user
+        group: ec2-user
+        mode: '0755'
 
     - name: Create systemd service file for Flask app
       copy:
@@ -39,9 +59,17 @@
           WorkingDirectory=/home/ec2-user/myflaskapp
           ExecStart=/home/ec2-user/flaskapp/venv/bin/python /home/ec2-user/myflaskapp/myapp.py
           Restart=always
+          Environment=FLASK_APP=myapp.py
+          Environment=FLASK_ENV=production
 
           [Install]
           WantedBy=multi-user.target
+      notify:
+        - Reload systemd
+
+    - name: Reload systemd to apply service file changes
+      systemd:
+        daemon_reload: yes
 
     - name: Start and enable Flask app service
       systemd:
